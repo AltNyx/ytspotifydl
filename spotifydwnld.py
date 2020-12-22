@@ -11,17 +11,8 @@ import sys
 import re
 import os
 
-interrupted = False
 
 spotify_tracks = SpotifyTracks()
-
-
-def signal_handler(signal, frame):
-    global interrupted
-    interrupted = True
-
-
-signal.signal(signal.SIGINT, signal_handler)
 
 
 def get_yt_url(song_name):
@@ -63,33 +54,20 @@ def add_tags(song_path, song):
     tag.save(version=eyed3.id3.ID3_V2_3)
 
 
-def spotify_download(songs, limit):
-    print("Hold ctrl+c to stop.")
-    skipped, downloaded, error = 0, 0, 0
-    for i, song in enumerate(songs[:limit], 1):
-        print(f"\rDownloading song {i} of {limit}.", end="")
-        name = f'{song.artist} {song.title}'
+def spotify_download(song):
+    name = f'{song.artist} {song.title}'
+    song_path = download_song_from_yt(name)
 
-        # Keyboard interrupt
-        if interrupted:
-            sys.exit()
+    if not song_path:
+        return False
 
-        song_path = download_song_from_yt(name)
+    src = song_path
+    dest = os.path.splitext(src)[0] + '.mp3'
 
-        if not song_path:
-            error += 1
-            continue
+    if os.path.exists(dest):
+        os.remove(src)
+        return False
 
-        src = song_path
-        dest = os.path.splitext(src)[0] + '.mp3'
-
-        if os.path.exists(dest):
-            skipped += 1
-            os.remove(src)
-            continue
-
-        convert_to_mp3(src, dest)
-        add_tags(dest, song)
-        downloaded += 1
-
-    print(f"\nDone! Status: [{skipped=}, {error=}, {downloaded=}]")
+    convert_to_mp3(src, dest)
+    add_tags(dest, song)
+    return True

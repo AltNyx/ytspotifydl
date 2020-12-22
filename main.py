@@ -4,7 +4,9 @@ from spotifydwnld import spotify_download
 from PyInquirer import prompt, Separator
 from spotifytracks import SpotifyTracks
 from spotifydwnld import get_yt_url
+import concurrent.futures
 from pathlib import Path
+import time
 import sys
 import os
 
@@ -160,7 +162,19 @@ def main():
         return
 
     os.chdir(Path(path))
-    spotify_download(songs, limit=num_songs)
+    print("Hold ctrl+c to stop.")
+
+    start = time.perf_counter()
+    songs_downloaded = 0
+
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        processes = executor.map(spotify_download, songs)
+    
+    for p in concurrent.futures.as_completed(processes):
+        songs_downloaded += int(p.result())
+
+    end = time.perf_counter()
+    print(f"Downloaded {songs_downloaded} out of {len(songs)}. It took {end-start} seconds.")
 
 
 if __name__ == "__main__":
